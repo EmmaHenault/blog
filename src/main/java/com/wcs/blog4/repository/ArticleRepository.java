@@ -10,15 +10,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ArticleRepository extends JpaRepository<Article, Long> {
+
     List<Article> findByTitle(String title);
 
-    List<Article> findByContentContaining(String keyword);
+    List<Article> findByContent(String content);
 
-    List<Article> findByCreatedAt(LocalDateTime createdAt);
+    List<Article> findByCreatedAtAfter(LocalDateTime date);
 
-    @Query("SELECT a FROM Article a ORDER BY a.createdAt DESC")
-    List<Article> findTop5ByOrderByCreationDateDesc(Pageable pageable);
-    default List<Article> findLatest5Articles() {
-        return findTop5ByOrderByCreationDateDesc(PageRequest.of(0, 5));
-    }
+    List<Article> findTop5ByOrderByCreatedAtDesc();
 }

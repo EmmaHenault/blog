@@ -1,7 +1,9 @@
 package com.wcs.blog4.controller;
 
 import com.wcs.blog4.model.Article;
+import com.wcs.blog4.model.Category;
 import com.wcs.blog4.repository.ArticleRepository;
+import com.wcs.blog4.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,9 @@ public class ArticleController {
 
     @Autowired
     private ArticleRepository articleRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @GetMapping
     public ResponseEntity<List<Article>> getAllArticles() {
@@ -35,47 +40,20 @@ public class ArticleController {
         return ResponseEntity.ok(article);
     }
 
-    @GetMapping("/title/{title}")
-    public ResponseEntity<List<Article>> getArticlesByTitle(@PathVariable String title) {
-        List<Article> articles = articleRepository.findByTitle(title);
-        if (articles.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(articles);
-    }
-
-    @GetMapping("/latest")
-    public ResponseEntity<List<Article>> getLatestArticles() {
-        List<Article> articles = articleRepository.findLatest5Articles();
-        if (articles.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(articles);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Article>> getArticlesByContent(@RequestParam String keyword) {
-        List<Article> articles = articleRepository.findByContentContaining(keyword);
-        if (articles.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(articles);
-    }
-
-    @GetMapping("/date/{date}")
-    public ResponseEntity<List<Article>> getArticlesByDate(@PathVariable String date) {
-        LocalDateTime createdAt = LocalDateTime.parse(date);
-        List<Article> articles = articleRepository.findByCreatedAt(createdAt);
-        if (articles.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(articles);
-    }
-
     @PostMapping
     public ResponseEntity<Article> createArticle(@RequestBody Article article) {
         article.setCreatedAt(LocalDateTime.now());
         article.setUpdatedAt(LocalDateTime.now());
+
+        // Ajout de la catégorie
+        if (article.getCategory() != null) {
+            Category category = categoryRepository.findById(article.getCategory().getId()).orElse(null);
+            if (category == null) {
+                return ResponseEntity.badRequest().body(null); // Retourne une réponse 400 Bad Request si la catégorie n'est pas trouvée
+            }
+            article.setCategory(category);
+        }
+
         Article savedArticle = articleRepository.save(article);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedArticle);
     }
@@ -89,6 +67,14 @@ public class ArticleController {
             article.setTitle(articleDetails.getTitle());
             article.setContent(articleDetails.getContent());
             article.setUpdatedAt(LocalDateTime.now());
+
+            if (articleDetails.getCategory() != null) {
+                Category category = categoryRepository.findById(articleDetails.getCategory().getId()).orElse(null);
+                if (category == null) {
+                    return ResponseEntity.badRequest().body(null); // Retourne une réponse 400 Bad Request si la catégorie n'est pas trouvée
+                }
+                article.setCategory(category);
+            }
             Article updatedArticle = articleRepository.save(article);
             return ResponseEntity.ok(updatedArticle);
         }
@@ -103,4 +89,42 @@ public class ArticleController {
         articleRepository.delete(article);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/title/{title}")
+    public ResponseEntity<List<Article>> getArticlesByTitle(@PathVariable String title) {
+        List<Article> articles = articleRepository.findByTitle(title);
+        if (articles.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(articles);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Article>> getArticlesByContent(@RequestParam String content) {
+        List<Article> articles = articleRepository.findByContent(content);
+        if (articles.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(articles);
+    }
+
+    @GetMapping("/after")
+    public ResponseEntity<List<Article>> getArticlesAfterDate(@RequestParam String date) {
+        LocalDateTime localDateTime = LocalDateTime.parse(date);
+        List<Article> articles = articleRepository.findByCreatedAtAfter(localDateTime);
+        if (articles.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(articles);
+    }
+
+    @GetMapping("/last-five")
+    public ResponseEntity<List<Article>> getLastFiveArticles() {
+        List<Article> articles = articleRepository.findTop5ByOrderByCreatedAtDesc();
+        if (articles.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(articles);
+    }
+
 }
