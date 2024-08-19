@@ -1,5 +1,8 @@
 package com.wcs.blog4.controller;
 
+import com.wcs.blog4.dto.ArticleDTO;
+import com.wcs.blog4.dto.CategoryDTO;
+import com.wcs.blog4.model.Article;
 import com.wcs.blog4.model.Category;
 import com.wcs.blog4.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +13,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/categories")
 public class CategoryController {
@@ -18,48 +23,86 @@ public class CategoryController {
     private CategoryRepository categoryRepository;
 
     @GetMapping
-    public ResponseEntity<List<Category>> getAllCategories() {
+    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
         if (categories.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(categories);
+        List<CategoryDTO> categoryDTOs = categories.stream().map(this::convertToDTO).collect(Collectors.toList());
+        return ResponseEntity.ok(categoryDTOs);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Category> getCategoryById(@PathVariable Long id) {
+    public ResponseEntity<CategoryDTO> getCategoryById(@PathVariable Long id) {
         Category category = categoryRepository.findById(id).orElse(null);
         if (category == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(category);
+        return ResponseEntity.ok(convertToDTO(category));
     }
 
-    @PostMapping ResponseEntity<Category> createCategory(@RequestBody Category category) {
+    @PostMapping
+    public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO categoryDTO) {
+        Category category = convertToEntity(categoryDTO);
         Category savedCategory = categoryRepository.save(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCategory);
+        return ResponseEntity.status(201).body(convertToDTO(savedCategory));
     }
-
 
     @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @RequestBody Category category) {
-        Category categoryToUpdate = categoryRepository.findById(id).orElse(null);
-        if (categoryToUpdate == null) {
+    public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id, @RequestBody CategoryDTO categoryDTO) {
+        Category category = categoryRepository.findById(id).orElse(null);
+        if (category == null) {
             return ResponseEntity.notFound().build();
         }
-        categoryToUpdate.setName(category.getName());
-        Category updatedCategory = categoryRepository.save(categoryToUpdate);
-        return ResponseEntity.ok(updatedCategory);
+        category.setName(categoryDTO.getName());
+        Category updatedCategory = categoryRepository.save(category);
+        return ResponseEntity.ok(convertToDTO(updatedCategory));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Category> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         Category category = categoryRepository.findById(id).orElse(null);
         if (category == null) {
             return ResponseEntity.notFound().build();
         }
-        categoryRepository.deleteById(id);
-        return ResponseEntity.ok(category);
+        categoryRepository.delete(category);
+        return ResponseEntity.noContent().build();
     }
 
+    private CategoryDTO convertToDTO(Category category) {
+        CategoryDTO categoryDTO = new CategoryDTO();
+        categoryDTO.setId(category.getId());
+        categoryDTO.setName(category.getName());
+        categoryDTO.setArticles(category.getArticles().stream().map(article -> {
+            ArticleDTO articleDTO = new ArticleDTO();
+            articleDTO.setId(article.getId());
+            articleDTO.setTitle(article.getTitle());
+            articleDTO.setContent(article.getContent());
+            articleDTO.setCreatedAt(article.getCreatedAt());
+            articleDTO.setUpdatedAt(article.getUpdatedAt());
+            articleDTO.setCategoryId(article.getCategory().getId());
+            return articleDTO;
+        }).collect(Collectors.toList()));
+        return categoryDTO;
+    }
+
+    private Category convertToEntity(CategoryDTO categoryDTO) {
+        Category category = new Category();
+        category.setId(categoryDTO.getId());
+        category.setName(categoryDTO.getName());
+        category.setArticles(categoryDTO.getArticles().stream().map(articleDTO -> {
+            Article article = new Article();
+            article.setId(articleDTO.getId());
+            article.setTitle(articleDTO.getTitle());
+            article.setContent(articleDTO.getContent());
+            article.setCreatedAt(articleDTO.getCreatedAt());
+            article.setUpdatedAt(articleDTO.getUpdatedAt());
+            if (articleDTO.getCategoryId() != null) {
+                Category categoryRef = categoryRepository.findById(articleDTO.getCategoryId()).orElse(null);
+                article.setCategory(categoryRef);
+            }
+            return article;
+        }).collect(Collectors.toList()));
+        return category;
+    }
 }
