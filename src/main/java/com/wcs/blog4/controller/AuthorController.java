@@ -1,80 +1,59 @@
 package com.wcs.blog4.controller;
 
 import com.wcs.blog4.dto.AuthorDTO;
-import com.wcs.blog4.model.Author;
-import com.wcs.blog4.repository.AuthorRepository;
+import com.wcs.blog4.service.AuthorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/authors")
 public class AuthorController {
-    private final AuthorRepository authorRepository;
 
-    public AuthorController(AuthorRepository authorRepository) {
-        this.authorRepository = authorRepository;
+    private final AuthorService authorService;
+
+    public AuthorController(AuthorService authorService) {
+        this.authorService = authorService;
     }
 
     @GetMapping
     public ResponseEntity<List<AuthorDTO>> getAllAuthors() {
-        List<Author> authors = authorRepository.findAll();
-        if (authors.isEmpty()) {
+        List<AuthorDTO> authorDTOs = authorService.getAllAuthors();
+        if (authorDTOs.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        List<AuthorDTO> authorDTOs = authors.stream().map(this::convertToDTO).collect(Collectors.toList());
         return ResponseEntity.ok(authorDTOs);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AuthorDTO> getAuthorById(@PathVariable Long id) {
-        Author author = authorRepository.findById(id).orElse(null);
-        if (author == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(convertToDTO(author));
+        Optional<AuthorDTO> authorDTO = authorService.getAuthorById(id);
+        return authorDTO.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<AuthorDTO> createAuthor(@RequestBody Author author) {
-        Author savedAuthor = authorRepository.save(author);
-        return ResponseEntity.status(201).body(convertToDTO(savedAuthor));
+    public ResponseEntity<AuthorDTO> createAuthor(@RequestBody AuthorDTO authorDTO) {
+        AuthorDTO createdAuthor = authorService.createAuthor(authorDTO);
+        return ResponseEntity.status(201).body(createdAuthor);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AuthorDTO> updateAuthor(@PathVariable Long id, @RequestBody Author authorDetails) {
-        Author author = authorRepository.findById(id).orElse(null);
-        if (author == null) {
-            return ResponseEntity.notFound().build();
-        }
-        author.setFirstname(authorDetails.getFirstname());
-        author.setLastname(authorDetails.getLastname());
-
-        Author updatedAuthor = authorRepository.save(author);
-        return ResponseEntity.ok(convertToDTO(updatedAuthor));
+    public ResponseEntity<AuthorDTO> updateAuthor(@PathVariable Long id, @RequestBody AuthorDTO authorDTO) {
+        Optional<AuthorDTO> updatedAuthor = authorService.updateAuthor(id, authorDTO);
+        return updatedAuthor.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAuthor(@PathVariable Long id) {
-        Author author = authorRepository.findById(id).orElse(null);
-
-        if (author == null) {
+        boolean deleted = authorService.deleteAuthor(id);
+        if (deleted) {
+            return ResponseEntity.noContent().build();
+        } else {
             return ResponseEntity.notFound().build();
         }
-
-        authorRepository.deleteById(id);
-
-        return ResponseEntity.noContent().build();
-    }
-
-    private AuthorDTO convertToDTO(Author author) {
-        AuthorDTO authorDTO = new AuthorDTO();
-        authorDTO.setId(author.getId());
-        authorDTO.setFirstname(author.getFirstname());
-        authorDTO.setLastname(author.getLastname());
-        return authorDTO;
     }
 }
-
