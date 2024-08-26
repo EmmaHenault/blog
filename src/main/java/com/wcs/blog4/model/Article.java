@@ -24,6 +24,17 @@ public class Article {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "article")
+    private List<ArticleAuthor> articleAuthors;
+
+    public List<ArticleAuthor> getArticleAuthors() {
+        return articleAuthors;
+    }
+
+    public void setArticleAuthors(List<ArticleAuthor> articleAuthors) {
+        this.articleAuthors = articleAuthors;
+    }
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

@@ -12,6 +12,16 @@ public class ArticleDTO {
 
     private List<String> imageUrls;
 
+    private List<AuthorDTO> authors;
+
+    public List<AuthorDTO> getAuthors() {
+        return authors;
+    }
+
+    public void setAuthors(List<AuthorDTO> authors) {
+        this.authors = authors;
+    }
+
     public Long getId() {
         return id;
     }
