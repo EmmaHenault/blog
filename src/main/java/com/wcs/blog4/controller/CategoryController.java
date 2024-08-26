@@ -2,10 +2,8 @@ package com.wcs.blog4.controller;
 
 import com.wcs.blog4.dto.ArticleDTO;
 import com.wcs.blog4.dto.CategoryDTO;
-import com.wcs.blog4.model.Article;
 import com.wcs.blog4.model.Category;
 import com.wcs.blog4.repository.CategoryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,8 +17,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/categories")
 public class CategoryController {
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final CategoryRepository categoryRepository;
+
+    public CategoryController(CategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
+    }
 
     @GetMapping
     public ResponseEntity<List<CategoryDTO>> getAllCategories() {
@@ -28,6 +29,7 @@ public class CategoryController {
         if (categories.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
+
         List<CategoryDTO> categoryDTOs = categories.stream().map(this::convertToDTO).collect(Collectors.toList());
         return ResponseEntity.ok(categoryDTOs);
     }
@@ -42,30 +44,34 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO categoryDTO) {
-        Category category = convertToEntity(categoryDTO);
+    public ResponseEntity<CategoryDTO> createCategory(@RequestBody Category category) {
         Category savedCategory = categoryRepository.save(category);
-        return ResponseEntity.status(201).body(convertToDTO(savedCategory));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(savedCategory));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id, @RequestBody CategoryDTO categoryDTO) {
+    public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id, @RequestBody Category categoryDetails) {
         Category category = categoryRepository.findById(id).orElse(null);
         if (category == null) {
             return ResponseEntity.notFound().build();
         }
-        category.setName(categoryDTO.getName());
+
+        category.setName(categoryDetails.getName());
+
         Category updatedCategory = categoryRepository.save(category);
+
         return ResponseEntity.ok(convertToDTO(updatedCategory));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategoryById(@PathVariable Long id) {
         Category category = categoryRepository.findById(id).orElse(null);
         if (category == null) {
             return ResponseEntity.notFound().build();
         }
-        categoryRepository.delete(category);
+
+        categoryRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -73,36 +79,19 @@ public class CategoryController {
         CategoryDTO categoryDTO = new CategoryDTO();
         categoryDTO.setId(category.getId());
         categoryDTO.setName(category.getName());
-        categoryDTO.setArticles(category.getArticles().stream().map(article -> {
-            ArticleDTO articleDTO = new ArticleDTO();
-            articleDTO.setId(article.getId());
-            articleDTO.setTitle(article.getTitle());
-            articleDTO.setContent(article.getContent());
-            articleDTO.setCreatedAt(article.getCreatedAt());
-            articleDTO.setUpdatedAt(article.getUpdatedAt());
-            articleDTO.setCategoryId(article.getCategory().getId());
-            return articleDTO;
-        }).collect(Collectors.toList()));
-        return categoryDTO;
-    }
 
-    private Category convertToEntity(CategoryDTO categoryDTO) {
-        Category category = new Category();
-        category.setId(categoryDTO.getId());
-        category.setName(categoryDTO.getName());
-        category.setArticles(categoryDTO.getArticles().stream().map(articleDTO -> {
-            Article article = new Article();
-            article.setId(articleDTO.getId());
-            article.setTitle(articleDTO.getTitle());
-            article.setContent(articleDTO.getContent());
-            article.setCreatedAt(articleDTO.getCreatedAt());
-            article.setUpdatedAt(articleDTO.getUpdatedAt());
-            if (articleDTO.getCategoryId() != null) {
-                Category categoryRef = categoryRepository.findById(articleDTO.getCategoryId()).orElse(null);
-                article.setCategory(categoryRef);
-            }
-            return article;
-        }).collect(Collectors.toList()));
-        return category;
+        if(category.getArticles() != null) {
+            categoryDTO.setArticles(category.getArticles().stream().map(article -> {
+                ArticleDTO articleDTO = new ArticleDTO();
+                articleDTO.setId(article.getId());
+                articleDTO.setTitle(article.getTitle());
+                articleDTO.setContent(article.getContent());
+                articleDTO.setUpdatedAt(article.getUpdatedAt());
+                articleDTO.setCategoryName(article.getCategory().getName());
+                return articleDTO;
+            }).collect(Collectors.toList()));
+        }
+
+        return categoryDTO;
     }
 }

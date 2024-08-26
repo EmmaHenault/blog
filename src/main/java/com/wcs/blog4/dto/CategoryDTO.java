@@ -4,11 +4,12 @@ import java.util.List;
 
 
 public class CategoryDTO {
-    private Long id;
-    private String name;
-    private List<ArticleDTO> articles;
 
-    // Getters et setters
+    private Long id;
+
+    private String name;
+
+    private List<ArticleDTO> articles;
 
     public Long getId() {
         return id;
