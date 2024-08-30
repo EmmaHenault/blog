@@ -1,5 +1,6 @@
 package com.wcs.blog4.service;
 
+import com.wcs.blog4.dto.ArticleCreateDTO;
 import com.wcs.blog4.dto.ArticleDTO;
 import com.wcs.blog4.exception.RessourceNotFoundException;
 import com.wcs.blog4.mapper.ArticleMapper;
@@ -48,7 +49,8 @@ public class ArticleService {
         return articleMapper.convertToDTO(article);
     }
 
-    public ArticleDTO createArticle(Article article) {
+    public ArticleDTO createArticle(ArticleCreateDTO articleCreateDTO) {
+        Article article = articleMapper.convertToEntity(articleCreateDTO);
         article.setCreatedAt(LocalDateTime.now());
         article.setUpdatedAt(LocalDateTime.now());
 
