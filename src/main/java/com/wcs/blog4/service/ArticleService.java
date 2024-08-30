@@ -1,6 +1,7 @@
 package com.wcs.blog4.service;
 
 import com.wcs.blog4.dto.ArticleDTO;
+import com.wcs.blog4.exception.RessourceNotFoundException;
 import com.wcs.blog4.mapper.ArticleMapper;
 import com.wcs.blog4.model.*;
 import com.wcs.blog4.repository.*;
@@ -42,10 +43,8 @@ public class ArticleService {
     }
 
     public ArticleDTO getArticleById(Long id) {
-        Article article = articleRepository.findById(id).orElse(null);
-        if (article == null) {
-            return null;
-        }
+        Article article = articleRepository.findById(id)
+                .orElseThrow(() -> new RessourceNotFoundException("L'article avec l'id " + id + " n'a pas été trouvé"));
         return articleMapper.convertToDTO(article);
     }
 
